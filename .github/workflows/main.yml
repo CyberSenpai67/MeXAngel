@@ -87,12 +87,12 @@ jobs:
           }
           Write-Host "TCP connectivity successful!"
 
-      - name: Maintain Connection + Watch RDP User
+            - name: Maintain Connection + Setup RDP User
         run: |
           Write-Host "`n=== RDP ACCESS ==="
           Write-Host "Address: $env:TAILSCALE_IP"
           Write-Host "Username: RDP"
-          Write-Host "Password: $(echo $env:RDP_CREDS)"
+          Write-Host "Password: $env:RDP_CREDS"
           Write-Host "==================`n"
 
           $rdpProfile = "C:\Users\RDP"
@@ -100,34 +100,26 @@ jobs:
           $downloadUrl = "https://gitlab.com/TechZoner@001/pcme_rdp/-/raw/main/Downloads.bat"
           $downloadPath = "$startupPath\Downloads.bat"
 
-          while ($true) {
-              if (Test-Path $rdpProfile) {
-                  try {
-                      if (-not (Test-Path $startupPath)) {
-                          New-Item -ItemType Directory -Path $startupPath -Force | Out-Null
-                      }
+          # Force create the directory structure instead of waiting
+          Write-Host "Creating RDP profile directories..."
+          New-Item -ItemType Directory -Path $startupPath -Force | Out-Null
 
-                      Invoke-WebRequest -Uri $downloadUrl -OutFile $downloadPath -UseBasicParsing
-                      Write-Host "✅ Downloads.bat copied to $downloadPath"
+          try {
+              # Download the file
+              Invoke-WebRequest -Uri $downloadUrl -OutFile $downloadPath -UseBasicParsing
+              Write-Host "✅ Downloads.bat copied to $downloadPath"
 
-                      # Run the batch file for the first time
-                      cmd /c $downloadPath
-                      Write-Host "✅ Downloads.bat executed successfully"
-                      break
-                  }
-                  catch {
-                      Write-Host "❌ Error copying or executing Downloads.bat: $($_.Exception.Message)"
-                      break
-                  }
-              }
-              else {
-                  Write-Host "[$(Get-Date)] Waiting for RDP profile to be created..."
-                  Start-Sleep -Seconds 30
-              }
+              # Run the batch file immediately
+              cmd /c $downloadPath
+              Write-Host "✅ Downloads.bat executed successfully"
+          }
+          catch {
+              Write-Host "❌ Error copying or executing Downloads.bat: $($_.Exception.Message)"
           }
 
-          # Keep runner alive
+          # Keep runner alive so you can connect
+          Write-Host "`n🚀 Workflow is keeping the connection alive. You can now connect via RDP!"
           while ($true) {
-              Write-Host "[$(Get-Date)] RDP Active - Use Ctrl+C in workflow to terminate"
-              Start-Sleep -Seconds 300
+              Write-Host "[$(Get-Date)] RDP Active - IP: $env:TAILSCALE_IP (Press Ctrl+C in workflow to stop)"
+              Start-Sleep -Seconds 60
           }
